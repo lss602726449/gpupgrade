@@ -185,8 +185,13 @@ func RestartAgents(ctx context.Context,
 		wg.Add(1)
 		go func(host string) {
 			defer wg.Done()
+			ip, err := net.ResolveIPAddr("ip4", host)
 
-			address := host + ":" + strconv.Itoa(port)
+			if err != nil {
+				errs <- xerrors.Errorf("cannot get hostname %s error: %w", host, err)
+				return
+			}
+			address := ip.String() + ":" + strconv.Itoa(port)
 			timeoutCtx, cancelFunc := context.WithTimeout(ctx, 3*time.Second)
 			opts := []grpc.DialOption{
 				grpc.WithBlock(),
@@ -274,9 +279,13 @@ func (s *Server) AgentConns() ([]*idl.Connection, error) {
 
 	hostnames := AgentHosts(s.Source)
 	for _, host := range hostnames {
+		ip, err := net.ResolveIPAddr("ip4", host)
+		if err != nil {
+			return nil, xerrors.Errorf("cannot get hostname %s error: %w", host, err)
+		}
 		ctx, cancelFunc := context.WithTimeout(context.Background(), DialTimeout)
 		conn, err := gRPCDialer(ctx,
-			host+":"+strconv.Itoa(s.AgentPort),
+			ip.String()+":"+strconv.Itoa(s.AgentPort),
 			grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 		if err != nil {
 			cancelFunc()

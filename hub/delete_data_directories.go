@@ -84,7 +84,7 @@ func DeleteTargetTablespacesOnCoordinator(streams step.OutStreams, target *green
 			continue
 		}
 
-		path := upgrade.TablespacePath(tsInfo.GetLocation(), int32(target.Coordinator().DbID), target.Version.Major, catalogVersion)
+		path := upgrade.TablespacePath(tsInfo.GetLocation(), int32(target.Coordinator().DbID), target.Version.Version.Major, catalogVersion)
 		dirs = append(dirs, path)
 	}
 
@@ -113,7 +113,7 @@ func DeleteTargetTablespacesOnPrimaries(agentConns []*idl.Connection, target *gr
 					continue
 				}
 
-				path := upgrade.TablespacePath(tsInfo.GetLocation(), int32(seg.DbID), target.Version.Major, catalogVersion)
+				path := upgrade.TablespacePath(tsInfo.GetLocation(), int32(seg.DbID), target.Version.Version.Major, catalogVersion)
 				dirs = append(dirs, path)
 			}
 		}

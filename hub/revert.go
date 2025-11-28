@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/xerrors"
 
+	"github.com/greenplum-db/gpupgrade/greenplum"
 	"github.com/greenplum-db/gpupgrade/idl"
 	"github.com/greenplum-db/gpupgrade/step"
 	"github.com/greenplum-db/gpupgrade/utils"
@@ -99,7 +100,7 @@ Cannot revert and restore the source cluster. Please contact support.`)
 	// mirrors do not start causing gpstart to return a non-zero exit status.
 	// Ignore such failures, as gprecoverseg is executed to bring up the mirrors.
 	// Running gprecoverseg is expected to not take long.
-	shouldHandle5XMirrorFailure := s.Source.Version.Major == 5 && s.Mode != idl.Mode_link && primariesUpgraded
+	shouldHandle5XMirrorFailure := s.Source.Version.Databasetype == greenplum.Greenplum && s.Source.Version.Version.Major == 5 && s.Mode != idl.Mode_link && primariesUpgraded
 
 	st.RunConditionally(idl.Substep_start_source_cluster, configCreated, func(streams step.OutStreams) error {
 		err = s.Source.Start(streams)

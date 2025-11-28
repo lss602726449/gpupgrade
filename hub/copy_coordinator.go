@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/blang/semver/v4"
 	"golang.org/x/xerrors"
 
 	"github.com/greenplum-db/gpupgrade/config/backupdir"
@@ -95,18 +94,18 @@ func CopyCoordinatorDataDir(streams step.OutStreams, coordinatorDataDir string, 
 	return Copy(streams, source, destinationHostToBackupDir)
 }
 
-func CopyCoordinatorTablespaces(streams step.OutStreams, sourceVersion semver.Version, tablespaces greenplum.Tablespaces, agentHostsToBackupDir backupdir.AgentHostsToBackupDir) error {
-	if tablespaces == nil && sourceVersion.Major != 5 {
+func CopyCoordinatorTablespaces(streams step.OutStreams, sourceVersion greenplum.DatabaseVersion, tablespaces greenplum.Tablespaces, agentHostsToBackupDir backupdir.AgentHostsToBackupDir) error {
+	if len(tablespaces) == 0 {
 		return nil
 	}
 
 	var sourcePaths []string
-	if sourceVersion.Major == 5 {
+	if sourceVersion.Databasetype == greenplum.Greenplum && sourceVersion.Version.Major == 5 {
 		// 5X always needs to include the --old-tablespaces-file
 		sourcePaths = append(sourcePaths, utils.GetStateDirOldTablespacesFile())
 	}
 
-	sourcePaths = append(sourcePaths, tablespaces.GetCoordinatorTablespaces().UserDefinedTablespacesLocations()...)
+	sourcePaths = append(sourcePaths, tablespaces.GetCoordinatorTablespaces().CoordinatorUserDefinedTablespacesLocations()...)
 
 	destinationHostToBackupDir := make(backupdir.AgentHostsToBackupDir)
 	for host, backupDir := range agentHostsToBackupDir {

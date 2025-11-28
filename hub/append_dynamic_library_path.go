@@ -28,11 +28,17 @@ func AppendDynamicLibraryPath(intermediate *greenplum.Cluster, toAppend string) 
 
 	var currentValue string
 	prefix := "Master  value:"
+	prefix_coordinator := "Coordinator value:"
 	scanner := bufio.NewScanner(strings.NewReader(stream.StdoutBuf.String()))
 	for scanner.Scan() {
 		line := scanner.Text()
 		if strings.HasPrefix(line, prefix) {
 			line = strings.TrimPrefix(line, prefix)
+			currentValue = strings.TrimSpace(line)
+			break
+		}
+		if strings.HasPrefix(line, prefix_coordinator) {
+			line = strings.TrimPrefix(line, prefix_coordinator)
 			currentValue = strings.TrimSpace(line)
 			break
 		}

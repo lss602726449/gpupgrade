@@ -36,16 +36,21 @@ func GenerateDataMigrationScripts(streams step.OutStreams, nonInteractive bool, 
 		return err
 	}
 
-	switch {
-	case version.Major == 5:
-		seedDir = filepath.Join(seedDir, "5-to-6-seed-scripts")
-	case version.Major == 6:
-		seedDir = filepath.Join(seedDir, "6-to-7-seed-scripts")
-	case version.Major == 7:
-		// seedDir = filepath.Join(seedDir, "7-to-8-seed-scripts")
-		return nil // TODO: Remove once there are 7 > 8 data migration scripts
-	default:
-		return fmt.Errorf("failed to find seed scripts for Greenplum version %s under %q", version, seedDir)
+	switch version.Databasetype {
+	case greenplum.Greenplum:
+		switch {
+		case version.Version.Major == 5:
+			seedDir = filepath.Join(seedDir, "5-to-6-seed-scripts")
+		case version.Version.Major == 6:
+			seedDir = filepath.Join(seedDir, "6-to-7-seed-scripts")
+		case version.Version.Major == 7:
+			// seedDir = filepath.Join(seedDir, "7-to-8-seed-scripts")
+			return nil // TODO: Remove once there are 7 > 8 data migration scripts
+		default:
+			return fmt.Errorf("failed to find seed scripts for Greenplum version %s under %q", version.Version, seedDir)
+		}
+	case greenplum.Cloudberry:
+		return nil
 	}
 
 	_, err = fmt.Fprintf(streams.Stdout(), "\nGenerating data migration scripts for %v dir...\n", seedDir)

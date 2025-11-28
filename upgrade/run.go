@@ -4,10 +4,12 @@
 package upgrade
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/blang/semver/v4"
 
@@ -22,12 +24,45 @@ const DefaultDynamicLibraryPath = "$libdir"
 
 var pgupgradeCmd = exec.Command
 
+func ParseDatabaseVersion(s string) (string, semver.Version, error) {
+	var databasetype string
+	var databaseversion semver.Version
+	s = strings.TrimSpace(s)
+	parts := strings.SplitN(s, " ", 2)
+	if len(parts) != 2 {
+		return "", semver.Version{}, fmt.Errorf("invalid database version format: %q, expected 'Type Version'", s)
+	}
+
+	typeStr := strings.TrimSpace(parts[0])
+	switch strings.ToLower(typeStr) {
+	case "Greenplum", "greenplum":
+		databasetype = "Greenplum"
+	case "Cloudberry", "cloudberry":
+		databasetype = "Cloudberry"
+	default:
+		return "", semver.Version{}, fmt.Errorf("unknown database type: %s", typeStr)
+	}
+
+	versionStr := strings.TrimSpace(parts[1])
+	databaseversion, err := semver.ParseTolerant(versionStr)
+	if err != nil {
+		return "", semver.Version{}, fmt.Errorf("invalid version format %q: %w", versionStr, err)
+	}
+
+	return databasetype, databaseversion, nil
+}
+
 func Run(stdout, stderr io.Writer, opts *idl.PgOptions) error {
+	databasetype, databaseversion, err := ParseDatabaseVersion(opts.GetTargetVersion())
+
+	if err != nil {
+		return err
+	}
+
 	upgradeDir, err := utils.GetPgUpgradeDir(
 		opts.GetRole(),
 		opts.GetContentID(),
 		opts.GetPgUpgradeTimeStamp(),
-		opts.GetTargetVersion(),
 	)
 	if err != nil {
 		return err
@@ -52,7 +87,7 @@ func Run(stdout, stderr io.Writer, opts *idl.PgOptions) error {
 	}
 
 	// TODO: Update this to at least 7.2.0 once it's released
-	if semver.MustParse(opts.GetTargetVersion()).Major >= 7 {
+	if (strings.EqualFold(databasetype, "Greenplum") && databaseversion.Major >= 7) || strings.EqualFold(databasetype, "Cloudbeery") {
 		args = append(args, "--output-dir", upgradeDir)
 	}
 
@@ -78,7 +113,7 @@ func Run(stdout, stderr io.Writer, opts *idl.PgOptions) error {
 	}
 
 	// Below 7X, specify the dbid's for upgrading tablespaces.
-	if semver.MustParse(opts.GetTargetVersion()).Major < 7 && semver.MustParse(opts.GetTargetVersion()).Major >= 5 {
+	if strings.EqualFold(databasetype, "Greenplum") && databaseversion.Major < 7 && databaseversion.Major >= 5 {
 		if opts.GetAction() != idl.PgOptions_check {
 			args = append(args, "--old-tablespaces-file", utils.GetOldTablespacesFile(opts.GetBackupDir()))
 		}

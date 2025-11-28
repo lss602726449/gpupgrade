@@ -98,6 +98,7 @@ func Create(db *sql.DB, hubPort int, agentPort int, sourceGPHome string, targetG
 	}
 
 	targetVersion, err := greenplum.Version(targetGPHome)
+	sourceVersion, err := greenplum.Version(sourceGPHome)
 	if err != nil {
 		return Config{}, err
 	}
@@ -131,11 +132,9 @@ func Create(db *sql.DB, hubPort int, agentPort int, sourceGPHome string, targetG
 		return Config{}, err
 	}
 
-	if config.Source.Version.Major == 5 {
-		config.Source.Tablespaces, err = greenplum.TablespacesFromDB(db, utils.GetStateDirOldTablespacesFile())
-		if err != nil {
-			return Config{}, xerrors.Errorf("extract tablespace information: %w", err)
-		}
+	config.Source.Tablespaces, err = greenplum.TablespacesFromDB(db, sourceVersion, utils.GetStateDirOldTablespacesFile())
+	if err != nil {
+		return Config{}, xerrors.Errorf("extract tablespace information: %w", err)
 	}
 
 	return config, nil

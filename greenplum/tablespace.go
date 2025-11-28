@@ -16,7 +16,7 @@ import (
 	"github.com/greenplum-db/gpupgrade/utils"
 )
 
-const tablespacesQuery = `
+const tablespacesQuery_5 = `
 	SELECT
 		fsedbid as dbid,
 		upgrade_tablespace.oid as oid,
@@ -33,6 +33,8 @@ const tablespacesQuery = `
 			INNER JOIN pg_filespace_entry
 			ON fsefsoid = spcfsoid
 		) upgrade_tablespace`
+
+const tablespacesQuery = `SELECT dbid, t.oid as oid, spcname as name, pg_catalog.pg_tablespace_location(t.oid) as location, 1 as userdefined from pg_tablespace t, gp_segment_configuration where spcname not in ('pg_default', 'pg_global');`
 
 // map<tablespaceOid, tablespaceInfo>
 type SegmentTablespaces map[int32]*idl.TablespaceInfo
@@ -67,16 +69,36 @@ func (s SegmentTablespaces) UserDefinedTablespacesLocations() []string {
 	return dirs
 }
 
+func (s SegmentTablespaces) CoordinatorUserDefinedTablespacesLocations() []string {
+	var dirs []string
+	for _, tsInfo := range s {
+		if !tsInfo.GetUserDefined() {
+			continue
+		}
+
+		dirs = append(dirs, filepath.Join(tsInfo.GetLocation(), strconv.Itoa(CoordinatorDbid)))
+	}
+
+	return dirs
+}
+
 func GetTablespaceLocationForDbId(t *idl.TablespaceInfo, dbId int) string {
 	return filepath.Join(t.GetLocation(), strconv.Itoa(dbId))
 }
 
-func GetCoordinatorTablespaceLocation(basePath string, oid int) string {
-	return filepath.Join(basePath, strconv.Itoa(oid), strconv.Itoa(CoordinatorDbid))
+func GetCoordinatorTablespaceLocation(basePath string) string {
+	return filepath.Join(basePath, strconv.Itoa(CoordinatorDbid))
 }
 
-func GetTablespaceTuples(db *sql.DB) (TablespaceTuples, error) {
-	rows, err := db.Query(tablespacesQuery)
+func GetTablespaceTuples(db *sql.DB, sourceVersion DatabaseVersion) (TablespaceTuples, error) {
+	var query string
+	if sourceVersion.Databasetype == Greenplum && sourceVersion.Version.Major == 5 {
+		query = tablespacesQuery_5
+	} else {
+		query = tablespacesQuery
+	}
+
+	rows, err := db.Query(query)
 	if err != nil {
 		return nil, err
 	}
@@ -149,8 +171,8 @@ func boolToStrInt(b bool) string {
 // 1. query the database to get tablespace information
 // 2. write the tablespace information to a file
 // 3. converts the tablespace information to an internal structure
-func TablespacesFromDB(db *sql.DB, tablespacesFile string) (Tablespaces, error) {
-	tablespaceTuples, err := GetTablespaceTuples(db)
+func TablespacesFromDB(db *sql.DB, sourceVersion DatabaseVersion, tablespacesFile string) (Tablespaces, error) {
+	tablespaceTuples, err := GetTablespaceTuples(db, sourceVersion)
 	if err != nil {
 		return nil, xerrors.Errorf("retrieve tablespace information: %w", err)
 	}

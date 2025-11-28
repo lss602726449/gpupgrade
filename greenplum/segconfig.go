@@ -6,7 +6,6 @@ package greenplum
 import (
 	"database/sql"
 
-	"github.com/blang/semver/v4"
 	"golang.org/x/xerrors"
 )
 
@@ -61,7 +60,7 @@ func (s *SegConfig) IsOnHost(hostname string) bool {
 	return s.Hostname == hostname
 }
 
-func GetSegmentConfiguration(db *sql.DB, version semver.Version) (SegConfigs, error) {
+func GetSegmentConfiguration(db *sql.DB, version DatabaseVersion) (SegConfigs, error) {
 	query := `
 SELECT
 	dbid,
@@ -74,7 +73,7 @@ SELECT
 FROM gp_segment_configuration
 ORDER BY content, role;`
 
-	if version.Major == 5 {
+	if version.Databasetype == Greenplum && version.Version.Major == 5 {
 		query = `
 SELECT
 	s.dbid,

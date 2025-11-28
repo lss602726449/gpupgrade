@@ -15,7 +15,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/blang/semver/v4"
 	"github.com/kballard/go-shellquote"
 	"github.com/pkg/errors"
 	"golang.org/x/xerrors"
@@ -41,7 +40,7 @@ type Cluster struct {
 	Tablespaces Tablespaces
 
 	GPHome         string
-	Version        semver.Version
+	Version        DatabaseVersion
 	CatalogVersion string
 }
 
@@ -415,9 +414,15 @@ func (c *Cluster) RunGreenplumCmdWithEnvironment(streams step.OutStreams, utilit
 func (c *Cluster) runGreenplumCommand(streams step.OutStreams, utility string, args []string, envs []string) error {
 	path := filepath.Join(c.GPHome, "bin", utility)
 	args = append([]string{path}, args...)
+	var cmd *exec.Cmd
 
-	cmd := greenplumCommand("bash", "-c", fmt.Sprintf("source %s/greenplum_path.sh && %s", c.GPHome, shellquote.Join(args...)))
+	if (c.Version.Databasetype == Cloudberry && c.Version.Version.Major <= 2) || c.Version.Databasetype == Greenplum {
+		cmd = greenplumCommand("bash", "-c", fmt.Sprintf("source %s/greenplum_path.sh && %s", c.GPHome, shellquote.Join(args...)))
+	} else {
+		cmd = greenplumCommand("bash", "-c", fmt.Sprintf("source %s/cloudberry-env.sh && %s", c.GPHome, shellquote.Join(args...)))
+	}
 	cmd.Env = append(cmd.Env, fmt.Sprintf("%v=%v", "MASTER_DATA_DIRECTORY", c.CoordinatorDataDir()))
+	cmd.Env = append(cmd.Env, fmt.Sprintf("%v=%v", "COORDINATOR_DATA_DIRECTORY", c.CoordinatorDataDir()))
 	cmd.Env = append(cmd.Env, fmt.Sprintf("%v=%v", "PGPORT", c.CoordinatorPort()))
 	cmd.Env = append(cmd.Env, envs...)
 

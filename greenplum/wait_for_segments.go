@@ -14,7 +14,7 @@ import (
 func WaitForSegments(db *sql.DB, timeout time.Duration, cluster *Cluster) error {
 	startTime := time.Now()
 	for {
-		if cluster.Version.Major > 5 {
+		if cluster.Version.Databasetype == Greenplum && cluster.Version.Version.Major > 5 {
 			rows, err := db.Query("SELECT gp_request_fts_probe_scan();")
 			if err != nil {
 				return xerrors.Errorf("requesting gp_request_fts_probe_scan: %w", err)
@@ -73,7 +73,7 @@ WHERE content > -1 AND status = 'u' AND (role = preferred_role) ` + whereClause)
 	}
 
 	whereClause = "sent_location = flush_location;"
-	if cluster.Version.Major > 6 {
+	if (cluster.Version.Databasetype == Greenplum && cluster.Version.Version.Major > 6) || cluster.Version.Databasetype == Cloudberry {
 		whereClause = "sent_lsn = flush_lsn;"
 	}
 

@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/blang/semver/v4"
 	"golang.org/x/xerrors"
 
 	"github.com/greenplum-db/gpupgrade/greenplum"
@@ -19,8 +18,8 @@ import (
 	"github.com/greenplum-db/gpupgrade/utils/errorlist"
 )
 
-func UpdateConfFiles(agentConns []*idl.Connection, _ step.OutStreams, version semver.Version, intermediate *greenplum.Cluster, target *greenplum.Cluster) error {
-	if version.Major < 7 {
+func UpdateConfFiles(agentConns []*idl.Connection, _ step.OutStreams, version greenplum.DatabaseVersion, intermediate *greenplum.Cluster, target *greenplum.Cluster) error {
+	if version.Databasetype == greenplum.Greenplum && version.Version.Major < 7 {
 		// update gpperfmon.conf on coordinator
 		err := UpdateConfigurationFile([]*idl.UpdateFileConfOptions{{
 			Path:        filepath.Join(target.CoordinatorDataDir(), "gpperfmon", "conf", "gpperfmon.conf"),
@@ -109,9 +108,9 @@ func UpdatePostgresqlConfOnSegments(agentConns []*idl.Connection, intermediate *
 	return ExecuteRPC(agentConns, request)
 }
 
-func UpdateRecoveryConfOnSegments(agentConns []*idl.Connection, version semver.Version, intermediateCluster *greenplum.Cluster, target *greenplum.Cluster) error {
+func UpdateRecoveryConfOnSegments(agentConns []*idl.Connection, version greenplum.DatabaseVersion, intermediateCluster *greenplum.Cluster, target *greenplum.Cluster) error {
 	file := "postgresql.auto.conf"
-	if version.Major == 6 {
+	if version.Databasetype == greenplum.Greenplum && version.Version.Major == 6 {
 		file = "recovery.conf"
 	}
 

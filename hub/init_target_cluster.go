@@ -11,7 +11,6 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/blang/semver/v4"
 	"github.com/pkg/errors"
 	"golang.org/x/xerrors"
 
@@ -92,7 +91,7 @@ func InitTargetCluster(stream step.OutStreams, intermediate *greenplum.Cluster) 
 	})
 
 	args := []string{"-a", "-I", utils.GetInitsystemConfig()}
-	if intermediate.Version.Major >= 5 && intermediate.Version.Major < 7 {
+	if intermediate.Version.Databasetype == greenplum.Greenplum && intermediate.Version.Version.Major >= 5 && intermediate.Version.Version.Major < 7 {
 		// For 6X we add --ignore-warnings to gpinitsystem to return 0 on
 		// warnings and 1 on errors. 7X and later does this by default.
 		args = append(args, "--ignore-warnings")
@@ -101,7 +100,7 @@ func InitTargetCluster(stream step.OutStreams, intermediate *greenplum.Cluster) 
 	return intermediate.RunGreenplumCmdWithEnvironment(stream, "gpinitsystem", args, env)
 }
 
-func GetCheckpointSegmentsAndEncoding(gpinitsystemConfig []string, version semver.Version, db *sql.DB) ([]string, error) {
+func GetCheckpointSegmentsAndEncoding(gpinitsystemConfig []string, version greenplum.DatabaseVersion, db *sql.DB) ([]string, error) {
 	var encoding string
 	err := db.QueryRow("SELECT current_setting('server_encoding') AS string").Scan(&encoding)
 	if err != nil {
@@ -111,7 +110,7 @@ func GetCheckpointSegmentsAndEncoding(gpinitsystemConfig []string, version semve
 	gpinitsystemConfig = append(gpinitsystemConfig, fmt.Sprintf("ENCODING=%s", encoding))
 
 	// The 7X guc max_wal_size supersedes checkpoint_segments and its default value is sufficient.
-	if version.Major < 7 {
+	if version.Databasetype == greenplum.Greenplum && version.Version.Major < 7 {
 		var checkpointSegments string
 		err := db.QueryRow("SELECT current_setting('checkpoint_segments') AS string").Scan(&checkpointSegments)
 		if err != nil {

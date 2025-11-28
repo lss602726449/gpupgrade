@@ -399,7 +399,7 @@ func MustGetPgUpgradeLog(t *testing.T, contentID int32) string {
 
 	// TODO: we'll need to update this logic once we have fix the GP6 to GP7 pipeline
 	targetVersion := "6.20.0"
-	dir, err := utils.GetPgUpgradeDir(greenplum.PrimaryRole, contentID, "*", targetVersion)
+	dir, err := utils.GetPgUpgradeDir(greenplum.PrimaryRole, contentID, "*")
 	if err != nil {
 		t.Fatalf("unexpected err: %v", err)
 	}

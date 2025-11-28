@@ -112,12 +112,13 @@ func RestoreTablespaces(backupDir string, tablespaces map[int32]*idl.TablespaceI
 		}
 
 		targetDir := greenplum.GetTablespaceLocationForDbId(tablespace, dbid)
-		sourceDir := greenplum.GetCoordinatorTablespaceLocation(utils.GetTablespaceBackupDir(backupDir), int(oid)) + string(os.PathSeparator)
+		sourceDir := greenplum.GetCoordinatorTablespaceLocation(utils.GetTablespaceBackupDir(backupDir)) + string(os.PathSeparator)
 
+		/* do not overwrite the old tablespace data */
 		options := []rsync.Option{
 			rsync.WithSources(sourceDir),
 			rsync.WithDestination(targetDir),
-			rsync.WithOptions("--archive", "--delete"),
+			rsync.WithOptions("--archive", "--update"),
 		}
 
 		if err := rsync.Rsync(options...); err != nil {

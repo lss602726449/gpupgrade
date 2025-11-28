@@ -26,7 +26,7 @@ const TimeStringFormat = "20060102T150405"
 func UpgradeCoordinator(streams step.OutStreams, backupDir string, pgUpgradeVerbose bool, skipPgUpgradeChecks bool, pgUpgradeJobs uint, source *greenplum.Cluster, intermediate *greenplum.Cluster, action idl.PgOptions_Action, mode idl.Mode, pgUpgradeTimestamp string) error {
 	oldOptions := ""
 	// When upgrading from 5 the coordinator must be provided with its standby's dbid to allow WAL to sync.
-	if source.Version.Major == 5 && source.HasStandby() {
+	if source.Version.Databasetype == greenplum.Greenplum && source.Version.Version.Major == 5 && source.HasStandby() {
 		oldOptions = fmt.Sprintf("-x %d", source.Standby().DbID)
 	}
 
@@ -64,7 +64,7 @@ func UpgradeCoordinator(streams step.OutStreams, backupDir string, pgUpgradeVerb
 			return xerrors.Errorf("%s master: %v", action, err)
 		}
 
-		pgUpgradeDir, dirErr := utils.GetPgUpgradeDir(opts.GetRole(), opts.GetContentID(), opts.GetPgUpgradeTimeStamp(), opts.GetTargetVersion())
+		pgUpgradeDir, dirErr := utils.GetPgUpgradeDir(opts.GetRole(), opts.GetContentID(), opts.GetPgUpgradeTimeStamp())
 		if dirErr != nil {
 			err = errorlist.Append(err, dirErr)
 		}

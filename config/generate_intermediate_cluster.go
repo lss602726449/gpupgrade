@@ -6,7 +6,6 @@ package config
 import (
 	"fmt"
 
-	"github.com/blang/semver/v4"
 	"github.com/pkg/errors"
 
 	"github.com/greenplum-db/gpupgrade/greenplum"
@@ -15,7 +14,7 @@ import (
 	"github.com/greenplum-db/gpupgrade/utils"
 )
 
-func GenerateIntermediateCluster(source *greenplum.Cluster, ports []int, upgradeID string, version semver.Version, gphome string) (*greenplum.Cluster, error) {
+func GenerateIntermediateCluster(source *greenplum.Cluster, ports []int, upgradeID string, version greenplum.DatabaseVersion, gphome string) (*greenplum.Cluster, error) {
 	ports = utils.Sanitize(ports)
 
 	intermediate, err := greenplum.NewCluster([]greenplum.SegConfig{})
